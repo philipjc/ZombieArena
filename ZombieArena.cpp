@@ -4,6 +4,7 @@
 #include "ZombieArena.h"
 #include "TextureHolder.h"
 #include "Player.h"
+#include "Bullet.h"
 
 using namespace sf;
 
@@ -62,6 +63,21 @@ int main()
 	int numberOfZombiesAlive;
 	Zombie* zombies = nullptr;
 
+	// 100 bullets
+	Bullet bullets[100];
+
+	int currentBullet = 0;
+	int bulletsSpare = 24;
+
+	int bulletsInClip = 6;
+	int clipSize = 6;
+
+	float fireRate = 1;
+
+	// When was the fire button last pressed?
+	Time lastPressed;
+
+
 	// The main game loop
 	while (window.isOpen())
 	{
@@ -97,7 +113,26 @@ int main()
 				}
 				if (state == State::PLAYING)
 				{
-
+					// Reloading
+					if (event.key.code == Keyboard::R)
+					{
+						if (bulletsSpare >= clipSize)
+						{
+							// Plenty of bullets. Reload.
+							bulletsInClip = clipSize;
+							bulletsSpare -= clipSize;
+						}
+						else if (bulletsSpare > 0)
+						{
+							// Only few bullets left
+							bulletsInClip = bulletsSpare;
+							bulletsSpare = 0;
+						}
+						else // no spare bullets
+						{
+							// More here soon?!
+						}
+					}
 				}
 			}
 		} // End event polling
@@ -147,6 +182,57 @@ int main()
 			{
 				player.stopRight();
 			}
+
+			// Fire a bullet
+			if (Mouse::isButtonPressed(sf::Mouse::Left))
+			{
+				/*
+					All the previous code is wrapped in an if statement that executes whenever the left 
+					mouse button is pressed, that is, if (Mouse::isButtonPressed(sf::Mouse::Le
+					ft)). Note that the code will execute repeatedly, even if the player just holds down 
+					the button. The code we will go through now controls the rate of fire.
+					In the preceding code, we then check whether the total time elapsed in the game 
+					(gameTimeTotal) minus the time the player last shot a bullet (lastPressed) is 
+					greater than 1,000, divided by the current rate of fire and that the player has at 
+					least one bullet in the clip. We use 1,000 because this is the number of milliseconds 
+					in a second.
+
+					If this test is successful, the code that actually fires a bullet is executed. Shooting a 
+					bullet is easy because we did all the hard work in the Bullet class. We simply call 
+					shoot on the current bullet from the bullets array. We pass in the player's and the 
+					cross-hair's current horizontal and vertical locations. The bullet will be configured 
+					and set in flight by the code in the shoot function of the Bullet class.
+
+					All we must do is keep track of the array of bullets. We incremented the 
+					currentBullet variable. Then, we need to check to see whether we fired the last 
+					bullet (99) with the if (currentBullet > 99) statement. If it was the last bullet, we 
+					set currentBullet to zero. If it wasn't the last bullet, then the next bullet is ready to 
+					go whenever the rate of fire permits it and the player presses the left mouse button.
+
+					Finally, in the preceding code, we store the time that the bullet was fired into 
+					lastPressed and decrement bulletsInClip
+				*/
+
+				if (gameTimeTotal.asMilliseconds() - lastPressed.asMilliseconds() > 1000 / fireRate && bulletsInClip > 0)
+				{
+					// Pass the centre of the player 
+					// and the centre of the cross-hair
+					// to the shoot function
+					bullets[currentBullet].shoot(player.getCenter().x, player.getCenter().y, mouseWorldPosition.x, mouseWorldPosition.y);
+
+					currentBullet++;
+
+					if (currentBullet > 99)
+					{
+						currentBullet = 0;
+					}
+
+					lastPressed = gameTimeTotal;
+
+					bulletsInClip--;
+				}
+
+			} // End fire a bullet
 
 		} // End WASD while playing
 
@@ -257,6 +343,16 @@ int main()
 				}
 			}
 
+			// Update any bullets that are in-flight
+			// We made 100 bullets, update them all.
+			for (int i = 0; i < 100; i++)
+			{
+				if (bullets[i].isInFlight())
+				{
+					bullets[i].update(dtAsSeconds);
+				}
+			}
+
 		} // End updating the scene
 
 		/*
@@ -281,6 +377,15 @@ int main()
 				// We don't check whether the zombie is alive because even
 				// if the zombie is dead, we want to draw the blood splatter.
 				window.draw(zombies[i].getSprite());
+			}
+
+			// Draw the bullets
+			for (int i = 0; i < 100; i++)
+			{
+				if (bullets[i].isInFlight())
+				{
+					window.draw(bullets[i].getShape());
+				}
 			}
 
 			// Draw the player
@@ -318,3 +423,4 @@ int main()
 
 	return 0;
 }
+
