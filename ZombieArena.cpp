@@ -5,6 +5,7 @@
 #include "TextureHolder.h"
 #include "Player.h"
 #include "Bullet.h"
+#include "Pickup.h"
 
 using namespace sf;
 
@@ -77,6 +78,23 @@ int main()
 	// When was the fire button last pressed?
 	Time lastPressed;
 
+	// Hide the mouse pointer and replace it with crosshair
+	window.setMouseCursorVisible(true);
+
+	Sprite spriteCrosshair;
+	Texture textureCrosshair = TextureHolder::GetTexture("graphics/crosshair.png");
+
+	spriteCrosshair.setTexture(textureCrosshair);
+	spriteCrosshair.setOrigin(25, 25);
+
+	// Pickups
+	// Create a couple of pickups
+	Pickup healthPickup(1);
+	Pickup ammoPickup(2);
+
+	// Game details
+	int score = 0;
+	int highScore = 0;
 
 	// The main game loop
 	while (window.isOpen())
@@ -283,6 +301,11 @@ int main()
 				// Spawn the player in the middle of the arena
 				player.spawn(arena, resolution, tileSize);
 
+				// Configure the pickups
+				// Now knows where they can spawn. 
+				healthPickup.setArena(arena);
+				ammoPickup.setArena(arena);
+
 				// Create a horde of zombies
 				numberOfZombies = 10;
 
@@ -325,6 +348,17 @@ int main()
 			// Convert mouse position to the world coordinates of mainView view
 			mouseWorldPosition = window.mapPixelToCoords(Mouse::getPosition(), mainView);
 
+			// ===================================================================================
+			// ===========================  REFACTOR OPPORTUNITY  ================================
+			// 
+			//  An interesting improvement to the game would be to add a small random amount of 
+			// inaccuracy to each shot.This inaccuracy could perhaps be mitigated with an upgrade
+			//	between waves.
+			// ===================================================================================
+			
+			// Set the crosshair to the mouse world location
+			spriteCrosshair.setPosition(mouseWorldPosition);
+
 			// Update the player using the dt seconds and a static function from Mouse Class.
 			player.update(dtAsSeconds, Mouse::getPosition());
 
@@ -353,6 +387,95 @@ int main()
 				}
 			}
 
+
+			// Update health
+			healthPickup.update(dtAsSeconds);
+
+			// Update ammo
+			ammoPickup.update(dtAsSeconds);
+
+			// Collision detection
+			// ===================
+			// 
+			// Shoot Zombie
+			for (int i = 0; i < 100; i++)
+			{
+				for (int j = 0; j < numberOfZombies; j++)
+				{
+					Bullet bulletToCheck = bullets[i];
+					Zombie zombieTocheck = zombies[j];
+
+					bool bulletInFlight = bulletToCheck.isInFlight();
+					bool zombieHasHitPoints = zombieTocheck.isAlive();
+
+					if (bulletInFlight && zombieHasHitPoints)
+					{
+						bool bulletHitZombie = bulletToCheck.getPosition().intersects(zombieTocheck.getPosition());
+
+						if (bulletHitZombie)
+						{
+							// Stop the bullet
+							bulletToCheck.stop();
+
+							// Register the hit and see if it was a kill
+							if (zombieTocheck.hit())
+							{
+								// Adjust the score
+								score += 10;
+
+								if (score >= highScore)
+								{
+									highScore = score;
+								}
+
+								// Kill zombie
+								numberOfZombies--;
+
+								// When all the zombies are dead (again)
+								if (numberOfZombiesAlive == 0) {
+									state = State::LEVELING_UP;
+								}
+							}
+
+						}
+					}
+				}
+			} // End zombie being shot
+
+			// Zombie Player Collision 
+			for (int i = 0; i < numberOfZombies; i++)
+			{
+				FloatRect playerPosition = player.getPosition();
+				FloatRect zombiePosition = zombies[i].getPosition();
+				bool zombieAlive = zombies[i].isAlive();
+
+				if (playerPosition.intersects(zombiePosition) && zombieAlive)
+				{
+					if (player.hit(gameTimeTotal))
+					{
+						// More here later
+					}
+					if (player.getHealth() <= 0)
+					{
+						state = State::GAME_OVER;
+					}
+				}
+			} // End player touched
+
+			// Has the player touched health pickup
+			if (player.getPosition().intersects(healthPickup.getPosition()) && healthPickup.isSpawned())
+			{
+				player.increaseHealthLevel(healthPickup.gotIt());
+
+			}
+			
+			// Has the player touched ammo pickup
+			if (player.getPosition().intersects(ammoPickup.getPosition()) && ammoPickup.isSpawned())
+			{
+				bulletsSpare += ammoPickup.gotIt();
+
+			}
+
 		} // End updating the scene
 
 		/*
@@ -379,6 +502,7 @@ int main()
 				window.draw(zombies[i].getSprite());
 			}
 
+
 			// Draw the bullets
 			for (int i = 0; i < 100; i++)
 			{
@@ -390,6 +514,20 @@ int main()
 
 			// Draw the player
 			window.draw(player.getSprite());
+
+			// Draw the pick-ups, if currently spawned
+			if (ammoPickup.isSpawned())
+			{
+				window.draw(ammoPickup.getSprite());
+			}
+
+			if (healthPickup.isSpawned())
+			{
+				window.draw(healthPickup.getSprite());
+			}
+
+			// Draw the crosshair
+			window.draw(spriteCrosshair);
 		}
 
 		if (state == State::LEVELING_UP)
