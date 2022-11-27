@@ -149,6 +149,9 @@
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieArena.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="gamedata\scores.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
