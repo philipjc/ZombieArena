@@ -2,8 +2,8 @@
 
 #include <sstream>
 #include <fstream>
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
+#include "SFML/Audio.hpp"
+#include "SFML/Main.hpp"
 #include "ZombieArena.h"
 #include "TextureHolder.h"
 #include "Player.h"
@@ -265,10 +265,10 @@ int main()
 	while (window.isOpen())
 	{
 		/*
-		 ************
-		 Handle input
-		 ************
-		 */
+		ï¿½************
+		ï¿½Handle input
+		ï¿½************
+		ï¿½*/
 
 	// Handle events by polling
 		Event event;
